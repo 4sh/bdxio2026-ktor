@@ -28,7 +28,26 @@ tapmoc {
 }
 
 dependencies {
-    implementation(libs.guava)
+    implementation(ktorLibs.htmx.html)
+    implementation(ktorLibs.serialization.kotlinx.json)
+    implementation(ktorLibs.server.auth)
+    implementation(ktorLibs.server.autoHeadResponse)
+    implementation(ktorLibs.server.cachingHeaders)
+    implementation(ktorLibs.server.callLogging)
+    implementation(ktorLibs.server.compression)
+    implementation(ktorLibs.server.conditionalHeaders)
+    implementation(ktorLibs.server.config.yaml)
+    implementation(ktorLibs.server.contentNegotiation)
+    implementation(ktorLibs.server.core)
+    implementation(ktorLibs.server.cors)
+    implementation(ktorLibs.server.defaultHeaders)
+    implementation(ktorLibs.server.htmlBuilder)
+    implementation(ktorLibs.server.htmx)
+    implementation(ktorLibs.server.netty)
+    implementation(ktorLibs.server.partialContent)
+    implementation(ktorLibs.server.statusPages)
+    implementation(libs.kotlinx.html)
+    implementation(libs.logback.classic)
 }
 
 application {
