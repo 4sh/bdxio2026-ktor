@@ -55,6 +55,10 @@ application {
     mainClass = "fr.qsh.bdxio2026.AppKt"
 }
 
+tasks.run {
+    systemProperty("io.ktor.development", "true")
+}
+
 // region Testing
 
 dependencies {
