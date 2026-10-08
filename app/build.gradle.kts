@@ -14,6 +14,13 @@ plugins {
     application
 }
 
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xcollection-literals")
+        freeCompilerArgs.add("-Xreturn-value-checker=full")
+    }
+}
+
 // We are building an app that must be compatible with Java 17 and above
 tapmoc {
     java(17)
