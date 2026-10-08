@@ -126,6 +126,6 @@ fun Routing.createUser(
 
         users.createAccount(username, password)
 
-        call.respondRedirect(ROUTE_HOME)
+        call.respondRedirect(ROUTE_LOGIN)
     }
 }

@@ -18,6 +18,12 @@ fun Routing.homePage() {
             a(href = ROUTE_CREATE_USER) {
                 +"Create account"
             }
+
+            +" • "
+
+            a(href = ROUTE_LOGIN) {
+                +"Log in"
+            }
         }
     }
 }
