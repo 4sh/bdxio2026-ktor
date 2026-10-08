@@ -1,6 +1,6 @@
 package fr.qsh.bdxio2026
 
-import fr.qsh.bdxio2026.services.PingService
+import fr.qsh.bdxio2026.services.UserService
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -20,7 +20,7 @@ suspend fun Application.app() {
     configureOpenTelemetry(otel)
 
     val db = configureDatabase(otel)
-    val ping = PingService(db.collection("pings"))
+    val users = UserService(db.collection("users"))
 
-    configureRoutes(ping)
+    configureRoutes(users)
 }

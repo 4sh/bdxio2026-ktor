@@ -1,10 +1,12 @@
 package fr.qsh.bdxio2026
 
 import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.compression.*
 import io.ktor.server.plugins.conditionalheaders.*
+import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
@@ -32,5 +34,9 @@ fun Application.configureHttp() {
                 status = HttpStatusCode.InternalServerError,
             )
         }
+    }
+
+    install(ContentNegotiation) {
+        json()
     }
 }
