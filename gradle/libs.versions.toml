@@ -10,6 +10,11 @@ prepared = "2.6.0"
 kotlinx-coroutines = "1.11.0"
 testballoon = "1.1.0"
 ktmongo = "0.33.0"
+micrometer = "1.17.1"
+micrometer-tracing = "1.7.1"
+opentelemetry = "1.63.0"
+opentelemetry-ktor = "2.29.0-alpha"
+opentelemetry-semconv = "1.42.0"
 
 [libraries]
 kotlinx-coroutines-debug = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-debug", version.ref = "kotlinx-coroutines" }
@@ -20,6 +25,12 @@ prepared-suite = { module = "dev.opensavvy.prepared:suite", version.ref = "prepa
 prepared-runner-testballoon = { module = "dev.opensavvy.prepared:runner-testballoon", version.ref = "prepared" }
 prepared-compat-ktor = { module = "dev.opensavvy.prepared:compat-ktor", version.ref = "prepared" }
 ktmongo-coroutines = { module = "dev.opensavvy.ktmongo:driver-coroutines", version.ref = "ktmongo" }
+micrometer-observation = { module = "io.micrometer:micrometer-observation", version.ref = "micrometer" }
+micrometer-tracingBridgeOtel = { module = "io.micrometer:micrometer-tracing-bridge-otel", version.ref = "micrometer-tracing" }
+opentelemetry-exporterOtlp = { module = "io.opentelemetry:opentelemetry-exporter-otlp", version.ref = "opentelemetry" }
+opentelemetry-ktorInstrumentation = { module = "io.opentelemetry.instrumentation:opentelemetry-ktor-3.0", version.ref = "opentelemetry-ktor" }
+opentelemetry-sdkAutoconfigure = { module = "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure", version.ref = "opentelemetry" }
+opentelemetry-semconv = { module = "io.opentelemetry.semconv:opentelemetry-semconv", version.ref = "opentelemetry-semconv" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

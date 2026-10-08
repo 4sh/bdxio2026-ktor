@@ -51,6 +51,13 @@ dependencies {
     implementation(libs.logback.classic)
 
     implementation(libs.ktmongo.coroutines)
+
+    implementation(libs.micrometer.observation)
+    implementation(libs.micrometer.tracingBridgeOtel)
+    implementation(libs.opentelemetry.exporterOtlp)
+    implementation(libs.opentelemetry.ktorInstrumentation)
+    implementation(libs.opentelemetry.sdkAutoconfigure)
+    implementation(libs.opentelemetry.semconv)
 }
 
 application {

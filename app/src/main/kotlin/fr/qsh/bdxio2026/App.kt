@@ -16,7 +16,10 @@ fun main() {
 suspend fun Application.app() {
     configureHttp()
 
-    val db = configureDatabase()
+    val otel = getOpenTelemetry("app")
+    configureOpenTelemetry(otel)
+
+    val db = configureDatabase(otel)
     val ping = PingService(db.collection("pings"))
 
     configureRoutes(ping)
