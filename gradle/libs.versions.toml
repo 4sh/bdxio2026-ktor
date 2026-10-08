@@ -3,9 +3,11 @@
 
 [versions]
 guava = "33.5.0-jre"
+tapmoc = "0.4.2"
 
 [libraries]
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "2.4.0" }
+tapmoc = { id = "com.gradleup.tapmoc", version.ref = "tapmoc" }

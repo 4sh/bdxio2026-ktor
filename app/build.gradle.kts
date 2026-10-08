@@ -8,7 +8,14 @@
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.tapmoc)
     application
+}
+
+// We are building an app that must be compatible with Java 17 and above
+tapmoc {
+    java(17)
+    checkDependencies()
 }
 
 dependencies {
