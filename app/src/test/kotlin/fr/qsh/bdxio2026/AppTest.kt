@@ -1,4 +1,4 @@
-package org.example
+package fr.qsh.bdxio2026
 
 import opensavvy.prepared.runner.testballoon.preparedSuite
 

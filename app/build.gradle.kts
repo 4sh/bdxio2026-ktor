@@ -33,7 +33,7 @@ dependencies {
 
 application {
     // Define the main class for the application.
-    mainClass = "org.example.AppKt"
+    mainClass = "fr.qsh.bdxio2026.AppKt"
 }
 
 // region Testing
