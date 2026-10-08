@@ -9,6 +9,7 @@ tapmoc = "0.4.2"
 prepared = "2.6.0"
 kotlinx-coroutines = "1.11.0"
 testballoon = "1.1.0"
+ktmongo = "0.33.0"
 
 [libraries]
 kotlinx-coroutines-debug = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-debug", version.ref = "kotlinx-coroutines" }
@@ -18,9 +19,11 @@ testballoon-framework-core = { module = "de.infix.testBalloon:testBalloon-framew
 prepared-suite = { module = "dev.opensavvy.prepared:suite", version.ref = "prepared" }
 prepared-runner-testballoon = { module = "dev.opensavvy.prepared:runner-testballoon", version.ref = "prepared" }
 prepared-compat-ktor = { module = "dev.opensavvy.prepared:compat-ktor", version.ref = "prepared" }
+ktmongo-coroutines = { module = "dev.opensavvy.ktmongo:driver-coroutines", version.ref = "ktmongo" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-powerAssert = { id = "org.jetbrains.kotlin.plugin.power-assert", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 tapmoc = { id = "com.gradleup.tapmoc", version.ref = "tapmoc" }
 testballoon = { id = "de.infix.testBalloon", version.ref = "testballoon" }

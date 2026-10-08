@@ -1,5 +1,6 @@
 package fr.qsh.bdxio2026
 
+import fr.qsh.bdxio2026.services.PingService
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -14,5 +15,9 @@ fun main() {
 
 suspend fun Application.app() {
     configureHttp()
-    configureRoutes()
+
+    val db = configureDatabase()
+    val ping = PingService(db.collection("pings"))
+
+    configureRoutes(ping)
 }

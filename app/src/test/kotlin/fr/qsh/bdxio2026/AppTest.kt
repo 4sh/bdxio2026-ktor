@@ -17,6 +17,6 @@ val AppTest by preparedSuite {
     val client by server.preparedClient()
 
     test("Hello world") {
-        check(client().get("/").bodyAsText() == "Hello World!")
+        check(client().get("/").bodyAsText().contains("Hello World!"))
     }
 }

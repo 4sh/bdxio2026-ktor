@@ -11,6 +11,7 @@ plugins {
     alias(libs.plugins.kotlin.powerAssert)
     alias(libs.plugins.tapmoc)
     alias(libs.plugins.testballoon)
+    alias(libs.plugins.kotlin.serialization)
     application
 }
 
@@ -48,6 +49,8 @@ dependencies {
     implementation(ktorLibs.server.statusPages)
     implementation(libs.kotlinx.html)
     implementation(libs.logback.classic)
+
+    implementation(libs.ktmongo.coroutines)
 }
 
 application {
