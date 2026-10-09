@@ -6,6 +6,8 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.sessions.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.Serializable
 import opensavvy.ktmongo.bson.types.ObjectId
 
@@ -32,8 +34,15 @@ fun Application.configureAuth(
     install(Authentication) {
         session<AuthCookiePayload>(AUTH) {
             validate { session ->
-                session
-                    .takeIf { users.verifyToken(session.userId, session.token) }
+                try {
+                    session
+                        .takeIf { users.verifyToken(session.userId, session.token) }
+                } catch (e: Exception) {
+                    if (e is CancellationException) {
+                        ensureActive()
+                    }
+                    null
+                }
             }
 
             challenge {
