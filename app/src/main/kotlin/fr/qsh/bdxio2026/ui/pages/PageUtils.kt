@@ -20,6 +20,12 @@ suspend fun RoutingCall.respondPage(
         }
 
         body {
+            nav {
+                a("/") {
+                    +"Home"
+                }
+            }
+
             div {
                 id = "content"
 
