@@ -1,5 +1,6 @@
 package fr.qsh.bdxio2026
 
+import fr.qsh.bdxio2026.services.ProjectService
 import fr.qsh.bdxio2026.services.UserService
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -24,7 +25,8 @@ suspend fun Application.app() {
 
     val db = configureDatabase(otel)
     val users = UserService(db.collection("users"), clock)
+    val projects = ProjectService(db.collection("projects"))
 
     configureAuth(users)
-    configureRoutes(users, clock)
+    configureRoutes(users, projects, clock)
 }

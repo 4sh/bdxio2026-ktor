@@ -10,6 +10,8 @@ import kotlinx.coroutines.delay
 import opensavvy.prepared.runner.testballoon.preparedSuite
 import opensavvy.prepared.suite.clock
 import opensavvy.prepared.suite.prepared
+import opensavvy.prepared.suite.random.nextInt
+import opensavvy.prepared.suite.random.random
 import opensavvy.prepared.suite.time
 import kotlin.random.Random
 import kotlin.random.nextUInt
@@ -24,6 +26,10 @@ val users by prepared {
         collection = db().collection("users"),
         clock = time.clock,
     )
+}
+
+fun testUser(username: String = "test-user") = prepared {
+    users().createAccount("$username-${random.nextInt(0, 1_000_000)}", "password")
 }
 
 val UserServiceTest by preparedSuite {
