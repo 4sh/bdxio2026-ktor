@@ -5,12 +5,15 @@ import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.util.date.*
 import kotlinx.html.*
+import kotlin.time.Clock
 
 const val ROUTE_LOGIN = "/login"
 
 fun Routing.logIn(
     users: UserService,
+    clock: Clock,
 ) {
     suspend fun RoutingContext.respondLoginPage(
         username: String?,
@@ -81,6 +84,15 @@ fun Routing.logIn(
             return@post
         }
 
+        val token = users.createToken(username)
+
+        call.response.cookies.append(
+            name = "token",
+            value = token,
+            expires = GMTDate((clock.now() + UserService.tokenExpirationThreshold).toEpochMilliseconds()),
+            secure = !application.developmentMode,
+            httpOnly = !application.developmentMode,
+        )
         call.respondRedirect(ROUTE_HOME)
     }
 }

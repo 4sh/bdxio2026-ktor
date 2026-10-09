@@ -7,14 +7,16 @@ import fr.qsh.bdxio2026.ui.pages.logIn
 import io.ktor.server.application.*
 import io.ktor.server.http.content.*
 import io.ktor.server.routing.*
+import kotlin.time.Clock
 
 fun Application.configureRoutes(
     users: UserService,
+    clock: Clock,
 ) {
     routing {
         homePage()
         createUser(users)
-        logIn(users)
+        logIn(users, clock)
 
         staticResources("/assets", "assets")
     }
