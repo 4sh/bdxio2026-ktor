@@ -50,6 +50,14 @@ class UserService(
     suspend fun isUsernameAvailable(username: String): Boolean =
         !collection.exists { User::username eq username }
 
+    suspend fun findByUsername(username: String): ObjectId? =
+        collection.findOne { User::username eq username }?._id
+
+    suspend fun getUsernames(ids: List<ObjectId>): Map<ObjectId, String> =
+        collection.find { User::_id isOneOf ids }
+            .toList()
+            .associate { it._id to it.username }
+
     @IgnorableReturnValue
     suspend fun createAccount(
         username: String,

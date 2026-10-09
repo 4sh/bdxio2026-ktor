@@ -42,6 +42,33 @@ class ProjectService(
         Project::members.any eq currentUser
     }
 
+    /**
+     * Adds [newMember] to the project. Only the creator can do it.
+     *
+     * @return `false` if the project doesn't exist or [currentUser] isn't its creator.
+     */
+    @IgnorableReturnValue
+    suspend fun addMember(
+        projectId: ObjectId,
+        currentUser: ObjectId,
+        newMember: ObjectId,
+    ): Boolean {
+        val project = projects.findOne {
+            Project::_id eq projectId
+            Project::creator eq currentUser
+        } ?: return false
+
+        if (newMember in project.members)
+            return true
+
+        projects.filter { Project::_id eq projectId }
+            .updateOne {
+                Project::members push newMember
+            }
+
+        return true
+    }
+
     suspend fun getMine(
         currentUser: ObjectId,
     ): List<Project> = projects.find {

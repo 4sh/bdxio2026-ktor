@@ -19,7 +19,7 @@ fun Application.configureRoutes(
     routing {
         homePage(projects)
         createUser(users)
-        projectPages(projects)
+        projectPages(projects, users)
         logIn(users, clock)
 
         staticResources("/assets", "assets")

@@ -43,6 +43,70 @@ val ProjectServiceTest by preparedSuite {
             check(projects().getById(id, userB()) == null)
             check(projects().getMine(userB()) == emptyList<Project>())
         }
+
+        test("Share a project with another user") {
+            val owner = userA()
+            val member = userB()
+            val other = userC()
+
+            val id = projects().createProject(
+                name = "Test project",
+                currentUser = owner,
+            )
+
+            val added = projects().addMember(
+                projectId = id,
+                currentUser = owner,
+                newMember = member,
+            )
+            check(added)
+
+            check(projects().getById(id, currentUser = owner) != null) { "The owner can see their own project" }
+            check(projects().getById(id, currentUser = member) != null) { "A member can see projects they are a member of" }
+            check(projects().getById(id, currentUser = other) == null) { "Another user cannot see projects they are not a member of" }
+
+            check(projects().getMine(currentUser = owner).size == 1)
+            check(projects().getMine(currentUser = member).size == 1)
+            check(projects().getMine(currentUser = other).isEmpty())
+        }
+
+        test("Cannot share a project you are not a member of") {
+            val owner = userA()
+            val fakeMember = userB()
+            val other = userC()
+
+            val id = projects().createProject(
+                name = "Test project",
+                currentUser = owner,
+            )
+
+            check(!projects().addMember(projectId = id, currentUser = other, newMember = fakeMember))
+
+            // Check that this did not change the access rights
+            check(projects().getById(id, currentUser = fakeMember) == null)
+            check(projects().getMine(currentUser = fakeMember).isEmpty())
+        }
+
+        test("Cannot share a project you are not the creator of") {
+            val owner = userA()
+            val member = userB()
+            val other = userC()
+
+            val id = projects().createProject(
+                name = "Test project",
+                currentUser = owner,
+            )
+
+            // Invite the member for real
+            check(projects().addMember(projectId = id, currentUser = owner, newMember = member))
+
+            // The member attempts to invite a third member
+            check(!projects().addMember(projectId = id, currentUser = member, newMember = other))
+
+            // Check that this did not change the access rights
+            check(projects().getById(id, currentUser = other) == null)
+            check(projects().getMine(currentUser = other).isEmpty())
+        }
     }
 
 }

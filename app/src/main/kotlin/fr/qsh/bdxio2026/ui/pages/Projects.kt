@@ -2,7 +2,9 @@ package fr.qsh.bdxio2026.ui.pages
 
 import fr.qsh.bdxio2026.AUTH
 import fr.qsh.bdxio2026.AuthCookiePayload
+import fr.qsh.bdxio2026.services.Project
 import fr.qsh.bdxio2026.services.ProjectService
+import fr.qsh.bdxio2026.services.UserService
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
@@ -15,8 +17,11 @@ const val ROUTE_PROJECT_NEW = "/projects/new"
 
 fun routeProject(id: ObjectId) = "/projects/${id.hex}"
 
+fun routeProjectMembers(id: ObjectId) = "${routeProject(id)}/members"
+
 fun Routing.projectPages(
     projects: ProjectService,
+    users: UserService,
 ) {
     suspend fun RoutingContext.respondNewProjectPage(
         name: String?,
@@ -59,6 +64,82 @@ fun Routing.projectPages(
         }
     }
 
+    suspend fun RoutingContext.findProject(currentUser: ObjectId): Project? {
+        val id = try {
+            ObjectId(call.parameters["id"]!!)
+        } catch (_: IllegalArgumentException) {
+            call.respond(HttpStatusCode.NotFound)
+            return null
+        }
+
+        val project = projects.getById(id, currentUser)
+
+        if (project == null)
+            call.respond(HttpStatusCode.NotFound)
+
+        return project
+    }
+
+    suspend fun RoutingContext.respondProjectPage(
+        project: Project,
+        currentUser: ObjectId,
+        username: String? = null,
+        unknownUser: Boolean = false,
+    ) {
+        val usernames = users.getUsernames(project.members)
+
+        call.respondPage(
+            title = project.name,
+            status = when {
+                unknownUser -> HttpStatusCode.UnprocessableEntity
+                else -> HttpStatusCode.OK
+            }
+        ) {
+            h1 {
+                +project.name
+            }
+
+            h2 {
+                +"Members"
+            }
+
+            ul {
+                for (member in project.members) {
+                    li {
+                        +(usernames[member] ?: "Unknown user")
+                    }
+                }
+            }
+
+            if (project.creator == currentUser) {
+                form(
+                    action = routeProjectMembers(project._id),
+                    method = FormMethod.post,
+                    encType = FormEncType.applicationXWwwFormUrlEncoded
+                ) {
+                    p {
+                        label {
+                            +"Username: "
+                            input(InputType.text, name = "username") {
+                                required = true
+
+                                if (username != null)
+                                    value = username
+                            }
+                        }
+
+                        if (unknownUser)
+                            +" No such user"
+                    }
+
+                    input(InputType.submit) {
+                        value = "Add member"
+                    }
+                }
+            }
+        }
+    }
+
     authenticate(AUTH) {
         get(ROUTE_PROJECT_NEW) {
             respondNewProjectPage(name = null)
@@ -80,28 +161,31 @@ fun Routing.projectPages(
 
         get("/projects/{id}") {
             val user = call.principal<AuthCookiePayload>()!!
+            val project = findProject(user.userId) ?: return@get
 
-            val id = try {
-                ObjectId(call.parameters["id"]!!)
-            } catch (_: IllegalArgumentException) {
-                call.respond(HttpStatusCode.NotFound)
-                return@get
+            respondProjectPage(project, user.userId)
+        }
+
+        post("/projects/{id}/members") {
+            val user = call.principal<AuthCookiePayload>()!!
+            val project = findProject(user.userId) ?: return@post
+
+            if (project.creator != user.userId) {
+                call.respond(HttpStatusCode.Forbidden)
+                return@post
             }
 
-            val project = projects.getById(id, user.userId)
+            val username = call.receiveParameters()["username"]!!.trim()
+            val newMember = if (username.isEmpty()) null else users.findByUsername(username)
 
-            if (project == null) {
-                call.respond(HttpStatusCode.NotFound)
-                return@get
+            if (newMember == null) {
+                respondProjectPage(project, user.userId, username = username, unknownUser = true)
+                return@post
             }
 
-            call.respondPage(
-                title = project.name,
-            ) {
-                h1 {
-                    +project.name
-                }
-            }
+            projects.addMember(project._id, user.userId, newMember)
+
+            call.respondRedirect(routeProject(project._id))
         }
     }
 }
