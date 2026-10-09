@@ -31,20 +31,20 @@ val UserServiceTest by preparedSuite {
     test("Create user") {
         users().createAccount(username(), "whatever")
 
-        check(users().verifyCredentials(username(), "whatever"))
+        check(users().verifyCredentials(username(), "whatever") != null)
     }
 
     test("Create tokens") {
-        users().createAccount(username(), "whatever")
+        val userId = users().createAccount(username(), "whatever")
 
         val token = users().createToken(username())
 
-        check(users().verifyToken(username(), token))
+        check(users().verifyToken(userId, token))
     }
 
     test("Tokens are expired after ${UserService.tokenExpirationThreshold}") {
         coroutineScope {
-            users().createAccount(username(), "whatever")
+            val userId = users().createAccount(username(), "whatever")
 
             val token1 = users().createToken(username())
 
@@ -57,26 +57,26 @@ val UserServiceTest by preparedSuite {
 
             val token3 = users().createToken(username())
 
-            check(!users().verifyToken(username(), token1))
-            check(users().verifyToken(username(), token2.await()))
-            check(users().verifyToken(username(), token3))
+            check(!users().verifyToken(userId, token1))
+            check(users().verifyToken(userId, token2.await()))
+            check(users().verifyToken(userId, token3))
         }
     }
 
     test("A token that has been used does not expire") {
         coroutineScope {
-            users().createAccount(username(), "whatever")
+            val userId = users().createAccount(username(), "whatever")
 
             val tokenUnused = users().createToken(username())
             val tokenUsed = users().createToken(username())
 
             delay(UserService.tokenExpirationThreshold / 2)
-            check(users().verifyToken(username(), tokenUsed))
+            check(users().verifyToken(userId, tokenUsed))
 
             delay(UserService.tokenExpirationThreshold / 2 + 1.seconds)
 
-            check(!users().verifyToken(username(), tokenUnused))
-            check(users().verifyToken(username(), tokenUsed))
+            check(!users().verifyToken(userId, tokenUnused))
+            check(users().verifyToken(userId, tokenUsed))
         }
     }
 

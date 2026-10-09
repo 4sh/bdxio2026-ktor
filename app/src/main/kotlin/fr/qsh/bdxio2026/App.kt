@@ -25,5 +25,6 @@ suspend fun Application.app() {
     val db = configureDatabase(otel)
     val users = UserService(db.collection("users"), clock)
 
+    configureAuth(users)
     configureRoutes(users, clock)
 }

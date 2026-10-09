@@ -1,15 +1,17 @@
 package fr.qsh.bdxio2026.ui.pages
 
+import fr.qsh.bdxio2026.AuthCookiePayload
 import fr.qsh.bdxio2026.services.UserService
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.util.date.*
+import io.ktor.server.sessions.*
 import kotlinx.html.*
 import kotlin.time.Clock
 
 const val ROUTE_LOGIN = "/login"
+const val ROUTE_LOGOUT = "/logout"
 
 fun Routing.logIn(
     users: UserService,
@@ -76,7 +78,9 @@ fun Routing.logIn(
         val username = params["username"]!!
         val password = params["password"]!!
 
-        if (!users.verifyCredentials(username, password)) {
+        val userId = users.verifyCredentials(username, password)
+
+        if (userId == null) {
             respondLoginPage(
                 username = username,
                 invalidCredentials = true,
@@ -86,13 +90,17 @@ fun Routing.logIn(
 
         val token = users.createToken(username)
 
-        call.response.cookies.append(
-            name = "token",
-            value = token,
-            expires = GMTDate((clock.now() + UserService.tokenExpirationThreshold).toEpochMilliseconds()),
-            secure = !application.developmentMode,
-            httpOnly = !application.developmentMode,
-        )
+        call.sessions.set(AuthCookiePayload(userId, token))
         call.respondRedirect(ROUTE_HOME)
+    }
+
+    get(ROUTE_LOGOUT) {
+        val cookie = call.sessions.get<AuthCookiePayload>()
+
+        call.sessions.clear<AuthCookiePayload>()
+        call.respondRedirect(ROUTE_HOME)
+
+        if (cookie != null)
+            users.deleteToken(cookie.userId, cookie.token)
     }
 }

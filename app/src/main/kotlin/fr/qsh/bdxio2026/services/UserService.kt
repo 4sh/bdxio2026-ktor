@@ -50,10 +50,11 @@ class UserService(
     suspend fun isUsernameAvailable(username: String): Boolean =
         !collection.exists { User::username eq username }
 
+    @IgnorableReturnValue
     suspend fun createAccount(
         username: String,
         password: String,
-    ) {
+    ): ObjectId {
         val id = collection.newId()
 
         val salt = ByteArray(16)
@@ -71,17 +72,20 @@ class UserService(
                 passwordIterations = iterations,
             )
         )
+
+        return id
     }
 
     suspend fun verifyCredentials(
         username: String,
         password: String,
-    ): Boolean {
-        val user = collection.findOne { User::username eq username } ?: return false
+    ): ObjectId? {
+        val user = collection.findOne { User::username eq username } ?: return null
 
         val hash = hashPassword(password, user.passwordSalt.toArray(), user.passwordIterations)
 
-        return MessageDigest.isEqual(hash, user.passwordHash.toArray())
+        return user._id
+            .takeIf { MessageDigest.isEqual(hash, user.passwordHash.toArray()) }
     }
 
     suspend fun createToken(
@@ -108,11 +112,11 @@ class UserService(
     }
 
     suspend fun verifyToken(
-        username: String,
+        userId: ObjectId,
         token: String,
     ): Boolean {
         val user = collection.findOne {
-            User::username eq username
+            User::_id eq userId
             User::tokens.exists()
         } ?: return false
 
@@ -145,6 +149,32 @@ class UserService(
             }
 
         return isValid
+    }
+
+    suspend fun deleteToken(
+        userId: ObjectId,
+        token: String,
+    ) {
+        val user = collection.findOne {
+            User::_id eq userId
+            User::tokens.exists()
+        } ?: return
+
+        val validToken = user.tokens.firstOrNull {
+            MessageDigest.isEqual(
+                it.tokenHash.toArray(),
+                hashPassword(token, it.tokenSalt.toArray(), it.tokenIterations),
+            )
+        }
+
+        if (validToken != null) {
+            collection.filter { User::_id eq user._id }
+                .updateOne {
+                    User::tokens pull {
+                        UserTokens::tokenHash eq validToken.tokenHash
+                    }
+                }
+        }
     }
 
     private fun hashPassword(password: String, salt: ByteArray, iterations: Int): ByteArray =
