@@ -12,8 +12,25 @@ data class Project(
     val members: List<ObjectId>,
 )
 
+@Serializable
+data class Transaction(
+    val _id: ObjectId,
+    val projectId: ObjectId,
+
+    /**
+     * User who created the transaction.
+     */
+    val userId: ObjectId,
+
+    /**
+     * Stored in euro cents to avoid floating point imprecision.
+     */
+    val amount: Long,
+)
+
 class ProjectService(
     private val projects: CoroutineMongoCollection<Project>,
+    private val transactions: CoroutineMongoCollection<Transaction>,
 ) {
 
     suspend fun createProject(
@@ -74,5 +91,39 @@ class ProjectService(
     ): List<Project> = projects.find {
         Project::members.any eq currentUser
     }.toList()
+
+    suspend fun createTransaction(
+        currentUser: ObjectId,
+        project: ObjectId,
+        amount: Long,
+    ) {
+        check(getById(project, currentUser) != null) { "You are not allowed to access this project" }
+
+        val id = transactions.newId()
+
+        transactions.insertOne(
+            Transaction(
+                _id = id,
+                projectId = project,
+                userId = currentUser,
+                amount = amount,
+            )
+        )
+    }
+
+    suspend fun findTransactions(
+        currentUser: ObjectId,
+        project: ObjectId,
+    ): List<Transaction> {
+        check(getById(project, currentUser) != null) { "You are not allowed to access this project" }
+
+        return transactions.find({
+            sort {
+                descending(Transaction::_id)
+            }
+        }) {
+            Transaction::projectId eq project
+        }.toList()
+    }
 
 }

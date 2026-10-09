@@ -3,22 +3,23 @@ package fr.qsh.bdxio2026
 import fr.qsh.bdxio2026.services.Project
 import fr.qsh.bdxio2026.services.ProjectService
 import opensavvy.prepared.runner.testballoon.preparedSuite
+import opensavvy.prepared.suite.assertions.checkThrows
 import opensavvy.prepared.suite.assertions.log
 import opensavvy.prepared.suite.prepared
 
 val projects by prepared {
     ProjectService(
         projects = db().collection("projects"),
+        transactions = db().collection("transactions"),
     )
 }
 
 val ProjectServiceTest by preparedSuite {
-
-    val userA by testUser()
-    val userB by testUser()
-    val userC by testUser()
-
     suite("Project management") {
+        val userA by testUser()
+        val userB by testUser()
+        val userC by testUser()
+
         test("Create a project") {
             val id = projects().createProject(
                 name = "Test project",
@@ -109,4 +110,62 @@ val ProjectServiceTest by preparedSuite {
         }
     }
 
+    suite("Transactions") {
+        val owner by testUser()
+        val memberA by testUser()
+        val memberB by testUser()
+        val other by testUser()
+
+        val project by prepared {
+            val id = projects().createProject(
+                name = "Test project",
+                currentUser = owner(),
+            )
+
+            projects().addMember(
+                projectId = id,
+                currentUser = owner(),
+                newMember = memberA(),
+            )
+
+            projects().addMember(
+                projectId = id,
+                currentUser = owner(),
+                newMember = memberB(),
+            )
+
+            checkNotNull(projects().getById(id, currentUser = owner()))
+        }
+
+        test("A project member can create a transaction") {
+            projects().createTransaction(
+                currentUser = memberA(),
+                project = project()._id,
+                amount = 100L,
+            )
+
+            // All members have access to the transaction
+            val transactions = log(projects().findTransactions(currentUser = memberB(), project = project()._id))
+            check(transactions.size == 1)
+            check(transactions[0].amount == 100L)
+
+            // A non-member doesn't have access to the transactions
+            checkThrows<IllegalStateException> {
+                projects().findTransactions(currentUser = other(), project = project()._id)
+            }
+        }
+
+        test("A non-project member cannot create transactions") {
+            checkThrows<IllegalStateException> {
+                projects().createTransaction(
+                    currentUser = other(),
+                    project = project()._id,
+                    amount = 100L,
+                )
+            }
+
+            // No transaction was created
+            check(projects().findTransactions(currentUser = owner(), project = project()._id).isEmpty())
+        }
+    }
 }

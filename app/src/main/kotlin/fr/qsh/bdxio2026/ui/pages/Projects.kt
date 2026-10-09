@@ -12,12 +12,38 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.html.*
 import opensavvy.ktmongo.bson.types.ObjectId
+import java.math.BigDecimal
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import kotlin.math.absoluteValue
 
 const val ROUTE_PROJECT_NEW = "/projects/new"
 
 fun routeProject(id: ObjectId) = "/projects/${id.hex}"
 
 fun routeProjectMembers(id: ObjectId) = "${routeProject(id)}/members"
+
+fun routeProjectTransactions(id: ObjectId) = "${routeProject(id)}/transactions"
+
+private val dateTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneOffset.UTC)
+
+private fun formatEuros(cents: Long): String {
+    val sign = if (cents < 0) "-" else ""
+    val euros = (cents / 100).absoluteValue
+    val remainder = (cents % 100).absoluteValue
+    return "$sign$euros.${remainder.toString().padStart(2, '0')}\u00A0€"
+}
+
+private fun parseEuros(text: String): Long? = try {
+    val euros = BigDecimal(text.trim())
+    if (euros.stripTrailingZeros().scale() > 2) null
+    else euros.movePointRight(2).longValueExact()
+} catch (_: NumberFormatException) {
+    null
+} catch (_: ArithmeticException) {
+    null
+}
 
 fun Routing.projectPages(
     projects: ProjectService,
@@ -85,13 +111,16 @@ fun Routing.projectPages(
         currentUser: ObjectId,
         username: String? = null,
         unknownUser: Boolean = false,
+        amount: String? = null,
+        invalidAmount: Boolean = false,
     ) {
         val usernames = users.getUsernames(project.members)
+        val transactions = projects.findTransactions(currentUser, project._id)
 
         call.respondPage(
             title = project.name,
             status = when {
-                unknownUser -> HttpStatusCode.UnprocessableEntity
+                unknownUser || invalidAmount -> HttpStatusCode.UnprocessableEntity
                 else -> HttpStatusCode.OK
             }
         ) {
@@ -135,6 +164,55 @@ fun Routing.projectPages(
                     input(InputType.submit) {
                         value = "Add member"
                     }
+                }
+            }
+
+            h2 {
+                +"Transactions"
+            }
+
+            if (transactions.isEmpty()) {
+                p {
+                    +"No transactions yet."
+                }
+            } else {
+                ul {
+                    for (transaction in transactions) {
+                        li {
+                            val date = dateTimeFormat.format(Instant.ofEpochSecond(transaction._id.timestamp.epochSeconds))
+                            +"$date (UTC) – ${usernames[transaction.userId] ?: "Unknown user"}: ${formatEuros(transaction.amount)}"
+                        }
+                    }
+                }
+
+                p {
+                    +"Total: ${formatEuros(transactions.sumOf { it.amount })}"
+                }
+            }
+
+            form(
+                action = routeProjectTransactions(project._id),
+                method = FormMethod.post,
+                encType = FormEncType.applicationXWwwFormUrlEncoded
+            ) {
+                p {
+                    label {
+                        +"Amount (€): "
+                        input(InputType.number, name = "amount") {
+                            required = true
+                            step = "0.01"
+
+                            if (amount != null)
+                                value = amount
+                        }
+                    }
+
+                    if (invalidAmount)
+                        +" Invalid amount"
+                }
+
+                input(InputType.submit) {
+                    value = "Add transaction"
                 }
             }
         }
@@ -184,6 +262,23 @@ fun Routing.projectPages(
             }
 
             projects.addMember(project._id, user.userId, newMember)
+
+            call.respondRedirect(routeProject(project._id))
+        }
+
+        post("/projects/{id}/transactions") {
+            val user = call.principal<AuthCookiePayload>()!!
+            val project = findProject(user.userId) ?: return@post
+
+            val rawAmount = call.receiveParameters()["amount"]?.trim().orEmpty()
+            val amount = parseEuros(rawAmount)
+
+            if (amount == null) {
+                respondProjectPage(project, user.userId, amount = rawAmount, invalidAmount = true)
+                return@post
+            }
+
+            projects.createTransaction(user.userId, project._id, amount)
 
             call.respondRedirect(routeProject(project._id))
         }
