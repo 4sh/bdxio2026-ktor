@@ -116,6 +116,7 @@ fun Routing.projectPages(
     ) {
         val usernames = users.getUsernames(project.members)
         val transactions = projects.findTransactions(currentUser, project._id)
+        val spending = projects.findTotalSpending(currentUser, project._id)
 
         call.respondPage(
             title = project.name,
@@ -213,6 +214,18 @@ fun Routing.projectPages(
 
                 input(InputType.submit) {
                     value = "Add transaction"
+                }
+            }
+
+            h2 {
+                +"Total spending"
+            }
+
+            ul {
+                for (member in project.members) {
+                    li {
+                        +"${usernames[member] ?: "Unknown user"}: ${formatEuros(spending[member] ?: 0)}"
+                    }
                 }
             }
         }

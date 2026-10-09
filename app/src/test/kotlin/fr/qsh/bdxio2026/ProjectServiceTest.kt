@@ -167,5 +167,45 @@ val ProjectServiceTest by preparedSuite {
             // No transaction was created
             check(projects().findTransactions(currentUser = owner(), project = project()._id).isEmpty())
         }
+
+        suite("Total spending") {
+            test("The total is 0 when no transactions exist") {
+                check(projects().findTotalSpending(currentUser = owner(), project = project()._id).isEmpty())
+            }
+
+            test("Nominal case") {
+                val id = project()._id
+
+                projects().createTransaction(currentUser = memberA(), project = id, amount = 100L)
+                projects().createTransaction(currentUser = memberA(), project = id, amount = 50L)
+                projects().createTransaction(currentUser = memberB(), project = id, amount = 30L)
+
+                // Any member can read the totals
+                val spending = log(projects().findTotalSpending(currentUser = owner(), project = id))
+
+                check(spending == mapOf(memberA() to 150L, memberB() to 30L))
+                check(owner() !in spending) { "Users without transactions are absent from the result" }
+            }
+
+            test("The total ignores other projects") {
+                val id = project()._id
+
+                val otherProject = projects().createProject(
+                    name = "Other project",
+                    currentUser = memberA(),
+                )
+
+                projects().createTransaction(currentUser = memberA(), project = id, amount = 100L)
+                projects().createTransaction(currentUser = memberA(), project = otherProject, amount = 999L)
+
+                check(projects().findTotalSpending(currentUser = memberA(), project = id) == mapOf(memberA() to 100L))
+            }
+
+            test("A non-project member cannot read the total spending") {
+                checkThrows<IllegalStateException> {
+                    projects().findTotalSpending(currentUser = other(), project = project()._id)
+                }
+            }
+        }
     }
 }

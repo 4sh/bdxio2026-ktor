@@ -1,6 +1,7 @@
 package fr.qsh.bdxio2026.services
 
 import kotlinx.serialization.Serializable
+import opensavvy.ktmongo.api.toList
 import opensavvy.ktmongo.bson.types.ObjectId
 import opensavvy.ktmongo.coroutines.CoroutineMongoCollection
 
@@ -26,6 +27,12 @@ data class Transaction(
      * Stored in euro cents to avoid floating point imprecision.
      */
     val amount: Long,
+)
+
+@Serializable
+data class AmountPerUser(
+    val _id: ObjectId, // User ID
+    val balance: Long,
 )
 
 class ProjectService(
@@ -124,6 +131,22 @@ class ProjectService(
         }) {
             Transaction::projectId eq project
         }.toList()
+    }
+
+    suspend fun findTotalSpending(
+        currentUser: ObjectId,
+        project: ObjectId,
+    ): Map<ObjectId, Long> {
+        check(getById(project, currentUser) != null) { "You are not allowed to access this project" }
+
+        return transactions.aggregate()
+            .match { Transaction::projectId eq project }
+            .group {
+                AmountPerUser::_id set Transaction::userId
+                AmountPerUser::balance sum Transaction::amount
+            }
+            .toList()
+            .associate { it._id to it.balance }
     }
 
 }
