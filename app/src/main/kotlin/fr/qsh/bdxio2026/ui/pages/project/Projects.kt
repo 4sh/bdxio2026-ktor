@@ -1,10 +1,11 @@
-package fr.qsh.bdxio2026.ui.pages
+package fr.qsh.bdxio2026.ui.pages.project
 
 import fr.qsh.bdxio2026.AUTH
 import fr.qsh.bdxio2026.AuthCookiePayload
 import fr.qsh.bdxio2026.services.Project
 import fr.qsh.bdxio2026.services.ProjectService
 import fr.qsh.bdxio2026.services.UserService
+import fr.qsh.bdxio2026.ui.pages.respondPage
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*

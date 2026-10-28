@@ -1,15 +1,21 @@
-package fr.qsh.bdxio2026.ui.pages
+package fr.qsh.bdxio2026.ui.pages.home
 
 import fr.qsh.bdxio2026.AUTH
 import fr.qsh.bdxio2026.AuthCookiePayload
 import fr.qsh.bdxio2026.services.ProjectService
+import fr.qsh.bdxio2026.ui.pages.auth.ROUTE_CREATE_USER
+import fr.qsh.bdxio2026.ui.pages.auth.ROUTE_LOGIN
+import fr.qsh.bdxio2026.ui.pages.auth.ROUTE_LOGOUT
+import fr.qsh.bdxio2026.ui.pages.project.ROUTE_PROJECT_NEW
+import fr.qsh.bdxio2026.ui.pages.project.routeProject
+import fr.qsh.bdxio2026.ui.pages.respondPage
 import io.ktor.server.auth.*
 import io.ktor.server.routing.*
 import kotlinx.html.*
 
 const val ROUTE_HOME = "/"
 
-fun Routing.homePage(
+fun Route.homePage(
     projects: ProjectService,
 ) {
     authenticate(AUTH, optional = true) {

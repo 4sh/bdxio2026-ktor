@@ -1,7 +1,7 @@
 package fr.qsh.bdxio2026
 
 import fr.qsh.bdxio2026.services.UserService
-import fr.qsh.bdxio2026.ui.pages.ROUTE_LOGIN
+import fr.qsh.bdxio2026.ui.pages.auth.ROUTE_LOGIN
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.response.*
