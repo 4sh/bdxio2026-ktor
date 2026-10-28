@@ -26,6 +26,8 @@ fun routeProjectMembers(id: ObjectId) = "${routeProject(id)}/members"
 
 fun routeProjectTransactions(id: ObjectId) = "${routeProject(id)}/transactions"
 
+fun routeProjectReimbursements(id: ObjectId) = "${routeProject(id)}/reimbursements"
+
 private val dateTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneOffset.UTC)
 
 private fun formatEuros(cents: Long): String {
@@ -113,15 +115,29 @@ fun Routing.projectPages(
         unknownUser: Boolean = false,
         amount: String? = null,
         invalidAmount: Boolean = false,
+        reimbursementAmount: String? = null,
+        invalidReimbursement: Boolean = false,
     ) {
         val usernames = users.getUsernames(project.members)
         val transactions = projects.findTransactions(currentUser, project._id)
         val spending = projects.findTotalSpending(currentUser, project._id)
+        val reimbursements = projects.findReimbursements(currentUser, project._id)
+        val suggestions = projects.suggestReimbursements(currentUser, project._id)
+
+        val total = transactions.sumOf { it.amount }
+        val average = total / project.members.size
+
+        // Positive: the member still owes money. Negative: the member is owed money.
+        fun amountDue(member: ObjectId): Long {
+            val sent = reimbursements.filter { it.fromUser == member }.sumOf { it.amount }
+            val received = reimbursements.filter { it.toUser == member }.sumOf { it.amount }
+            return average - (spending[member] ?: 0) - sent + received
+        }
 
         call.respondPage(
             title = project.name,
             status = when {
-                unknownUser || invalidAmount -> HttpStatusCode.UnprocessableEntity
+                unknownUser || invalidAmount || invalidReimbursement -> HttpStatusCode.UnprocessableEntity
                 else -> HttpStatusCode.OK
             }
         ) {
@@ -187,7 +203,7 @@ fun Routing.projectPages(
                 }
 
                 p {
-                    +"Total: ${formatEuros(transactions.sumOf { it.amount })}"
+                    +"Total: ${formatEuros(total)} (per user: ~${formatEuros(average)})"
                 }
             }
 
@@ -225,6 +241,92 @@ fun Routing.projectPages(
                 for (member in project.members) {
                     li {
                         +"${usernames[member] ?: "Unknown user"}: ${formatEuros(spending[member] ?: 0)}"
+                    }
+                }
+            }
+
+            if (project.members.size > 1) {
+                h2 {
+                    +"Reimbursements"
+                }
+
+                ul {
+                    for (reimbursement in reimbursements) {
+                        li {
+                            +"${usernames[reimbursement.fromUser] ?: "Unknown user"} reimbursed ${usernames[reimbursement.toUser] ?: "Unknown user"}: ${formatEuros(reimbursement.amount)}"
+                        }
+                    }
+                }
+
+                ul {
+                    for (member in project.members) {
+                        li {
+                            +"${usernames[member] ?: "Unknown user"}: due ${formatEuros(amountDue(member))}"
+                        }
+                    }
+                }
+
+                h3 {
+                    +"Suggested reimbursements"
+                }
+
+                if (suggestions.isEmpty()) {
+                    p {
+                        +"Nothing to reimburse."
+                    }
+                } else {
+                    ul {
+                        for (suggestion in suggestions) {
+                            li {
+                                +"${usernames[suggestion.fromUser] ?: "Unknown user"} → ${usernames[suggestion.toUser] ?: "Unknown user"}: ${formatEuros(suggestion.amount)}"
+                            }
+                        }
+                    }
+                }
+
+                form(
+                    action = routeProjectReimbursements(project._id),
+                    method = FormMethod.post,
+                    encType = FormEncType.applicationXWwwFormUrlEncoded
+                ) {
+                    p {
+                        label {
+                            +"Reimburse: "
+                            select {
+                                name = "to"
+                                required = true
+
+                                for (member in project.members) {
+                                    if (member != currentUser) {
+                                        option {
+                                            value = member.hex
+                                            +(usernames[member] ?: "Unknown user")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        +" "
+
+                        label {
+                            +"Amount (€): "
+                            input(InputType.number, name = "amount") {
+                                required = true
+                                step = "0.01"
+                                min = "0.01"
+
+                                if (reimbursementAmount != null)
+                                    value = reimbursementAmount
+                            }
+                        }
+
+                        if (invalidReimbursement)
+                            +" Invalid reimbursement"
+                    }
+
+                    input(InputType.submit) {
+                        value = "Reimburse"
                     }
                 }
             }
@@ -292,6 +394,36 @@ fun Routing.projectPages(
             }
 
             projects.createTransaction(user.userId, project._id, amount)
+
+            call.respondRedirect(routeProject(project._id))
+        }
+
+        post("/projects/{id}/reimbursements") {
+            val user = call.principal<AuthCookiePayload>()!!
+            val project = findProject(user.userId) ?: return@post
+
+            val parameters = call.receiveParameters()
+            val rawAmount = parameters["amount"]?.trim().orEmpty()
+            val amount = parseEuros(rawAmount)
+            val destination = try {
+                ObjectId(parameters["to"].orEmpty())
+            } catch (_: IllegalArgumentException) {
+                null
+            }
+
+            if (amount == null || amount <= 0 || destination == null ||
+                destination == user.userId || destination !in project.members
+            ) {
+                respondProjectPage(
+                    project,
+                    user.userId,
+                    reimbursementAmount = rawAmount,
+                    invalidReimbursement = true
+                )
+                return@post
+            }
+
+            projects.createReimbursement(user.userId, destination, project._id, amount)
 
             call.respondRedirect(routeProject(project._id))
         }

@@ -2,6 +2,7 @@ package fr.qsh.bdxio2026
 
 import fr.qsh.bdxio2026.services.Project
 import fr.qsh.bdxio2026.services.ProjectService
+import fr.qsh.bdxio2026.services.SuggestedReimbursement
 import opensavvy.prepared.runner.testballoon.preparedSuite
 import opensavvy.prepared.suite.assertions.checkThrows
 import opensavvy.prepared.suite.assertions.log
@@ -11,6 +12,7 @@ val projects by prepared {
     ProjectService(
         projects = db().collection("projects"),
         transactions = db().collection("transactions"),
+        reimbursements = db().collection("reimbursements"),
     )
 }
 
@@ -205,6 +207,201 @@ val ProjectServiceTest by preparedSuite {
                 checkThrows<IllegalStateException> {
                     projects().findTotalSpending(currentUser = other(), project = project()._id)
                 }
+            }
+        }
+    }
+
+    suite("Reimbursements") {
+        val owner by testUser()
+        val member by testUser()
+        val other by testUser()
+
+        val project by prepared {
+            val id = projects().createProject(
+                name = "Test project",
+                currentUser = owner(),
+            )
+
+            projects().addMember(
+                projectId = id,
+                currentUser = owner(),
+                newMember = member(),
+            )
+
+            checkNotNull(projects().getById(id, currentUser = owner()))
+        }
+
+        test("No reimbursements exist by default") {
+            check(projects().findReimbursements(currentUser = owner(), project = project()._id).isEmpty())
+        }
+
+        test("A project member can create a reimbursement") {
+            projects().createReimbursement(
+                currentUser = member(),
+                destinationUser = owner(),
+                project = project()._id,
+                amount = 100L,
+            )
+
+            // All members have access to the reimbursement
+            val reimbursements = log(projects().findReimbursements(currentUser = owner(), project = project()._id))
+            check(reimbursements.size == 1)
+            check(reimbursements[0].projectId == project()._id)
+            check(reimbursements[0].fromUser == member())
+            check(reimbursements[0].toUser == owner())
+            check(reimbursements[0].amount == 100L)
+
+            // A non-member doesn't have access to the reimbursements
+            checkThrows<IllegalStateException> {
+                projects().findReimbursements(currentUser = other(), project = project()._id)
+            }
+        }
+
+        test("A non-project member cannot create reimbursements") {
+            checkThrows<IllegalStateException> {
+                projects().createReimbursement(
+                    currentUser = other(),
+                    destinationUser = owner(),
+                    project = project()._id,
+                    amount = 100L,
+                )
+            }
+
+            check(projects().findReimbursements(currentUser = owner(), project = project()._id).isEmpty())
+        }
+
+        test("Cannot reimburse a user who is not a project member") {
+            checkThrows<IllegalStateException> {
+                projects().createReimbursement(
+                    currentUser = owner(),
+                    destinationUser = other(),
+                    project = project()._id,
+                    amount = 100L,
+                )
+            }
+
+            check(projects().findReimbursements(currentUser = owner(), project = project()._id).isEmpty())
+        }
+
+        test("Cannot reimburse yourself") {
+            checkThrows<IllegalStateException> {
+                projects().createReimbursement(
+                    currentUser = owner(),
+                    destinationUser = owner(),
+                    project = project()._id,
+                    amount = 100L,
+                )
+            }
+
+            check(projects().findReimbursements(currentUser = owner(), project = project()._id).isEmpty())
+        }
+
+        test("The amount must be positive") {
+            for (amount in listOf(0L, -100L)) {
+                checkThrows<IllegalStateException> {
+                    projects().createReimbursement(
+                        currentUser = member(),
+                        destinationUser = owner(),
+                        project = project()._id,
+                        amount = amount,
+                    )
+                }
+            }
+
+            check(projects().findReimbursements(currentUser = owner(), project = project()._id).isEmpty())
+        }
+
+        test("Reimbursements ignore other projects") {
+            val otherProject = projects().createProject(
+                name = "Other project",
+                currentUser = owner(),
+            )
+            projects().addMember(projectId = otherProject, currentUser = owner(), newMember = member())
+
+            projects().createReimbursement(currentUser = member(), destinationUser = owner(), project = project()._id, amount = 100L)
+            projects().createReimbursement(currentUser = member(), destinationUser = owner(), project = otherProject, amount = 999L)
+
+            val reimbursements = projects().findReimbursements(currentUser = owner(), project = project()._id)
+            check(reimbursements.map { it.amount } == listOf(100L))
+        }
+    }
+
+    suite("Suggested reimbursements") {
+        val userA by testUser()
+        val userB by testUser()
+        val userC by testUser()
+        val other by testUser()
+
+        val project by prepared {
+            val id = projects().createProject(
+                name = "Test project",
+                currentUser = userA(),
+            )
+
+            projects().addMember(projectId = id, currentUser = userA(), newMember = userB())
+            projects().addMember(projectId = id, currentUser = userA(), newMember = userC())
+
+            checkNotNull(projects().getById(id, currentUser = userA()))
+        }
+
+        test("Nothing to suggest without transactions") {
+            check(projects().suggestReimbursements(currentUser = userA(), project = project()._id).isEmpty())
+        }
+
+        test("Nothing to suggest when spending is already even") {
+            projects().createTransaction(currentUser = userA(), project = project()._id, amount = 100L)
+            projects().createTransaction(currentUser = userB(), project = project()._id, amount = 100L)
+            projects().createTransaction(currentUser = userC(), project = project()._id, amount = 100L)
+
+            check(projects().suggestReimbursements(currentUser = userA(), project = project()._id).isEmpty())
+        }
+
+        test("One member overspent") {
+            projects().createTransaction(currentUser = userA(), project = project()._id, amount = 100L)
+            projects().createTransaction(currentUser = userB(), project = project()._id, amount = 150L)
+            projects().createTransaction(currentUser = userC(), project = project()._id, amount = 50L)
+
+            check(projects().suggestReimbursements(currentUser = userA(), project = project()._id) == listOf(SuggestedReimbursement(fromUser = userC(), toUser = userB(), amount = 50L)))
+        }
+
+        test("Existing reimbursements are taken into account") {
+            projects().createTransaction(currentUser = userA(), project = project()._id, amount = 100L)
+            projects().createTransaction(currentUser = userB(), project = project()._id, amount = 150L)
+            projects().createTransaction(currentUser = userC(), project = project()._id, amount = 50L)
+
+            projects().createReimbursement(currentUser = userC(), destinationUser = userB(), project = project()._id, amount = 20L)
+            check(projects().suggestReimbursements(currentUser = userA(), project = project()._id) == listOf(SuggestedReimbursement(fromUser = userC(), toUser = userB(), amount = 30L)))
+
+            projects().createReimbursement(currentUser = userC(), destinationUser = userB(), project = project()._id, amount = 30L)
+            check(projects().suggestReimbursements(currentUser = userA(), project = project()._id).isEmpty())
+        }
+
+        test("Several debtors, one creditor") {
+            // 100 per user
+            projects().createTransaction(currentUser = userA(), project = project()._id, amount = 300L)
+
+            val result = log(projects().suggestReimbursements(currentUser = userA(), project = project()._id))
+
+            check(result.size == 2)
+            check(result[0] == SuggestedReimbursement(fromUser = userB(), toUser = userA(), amount = 100L))
+            check(result[1] == SuggestedReimbursement(fromUser = userC(), toUser = userA(), amount = 100L))
+        }
+
+        test("Remaining cents are fully settled") {
+            // ~33 per user
+            projects().createTransaction(currentUser = userA(), project = project()._id, amount = 100L)
+
+            val result = log(projects().suggestReimbursements(currentUser = userA(), project = project()._id))
+
+            // Shares are 34, 33, 33 cents: A has spent 100 and is owed 66 in total
+            check(result.sumOf { it.amount } == 66L)
+            check(result.all { it.toUser == userA() })
+            check(result.size == 2)
+        }
+
+        test("A non-project member cannot get suggestions") {
+            checkThrows<IllegalStateException> {
+                projects().suggestReimbursements(currentUser = other(), project = project()._id)
             }
         }
     }
