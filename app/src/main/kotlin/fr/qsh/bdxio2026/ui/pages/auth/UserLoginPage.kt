@@ -10,14 +10,12 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import kotlinx.html.*
-import kotlin.time.Clock
 
 const val ROUTE_LOGIN = "/login"
 const val ROUTE_LOGOUT = "/logout"
 
-fun Routing.logIn(
+fun Route.logIn(
     users: UserService,
-    clock: Clock,
 ) {
     suspend fun RoutingContext.respondLoginPage(
         username: String?,
@@ -39,32 +37,10 @@ fun Routing.logIn(
                 method = FormMethod.post,
                 encType = FormEncType.applicationXWwwFormUrlEncoded
             ) {
-                p {
-                    label {
-                        +"Username: "
-                        input(InputType.text, name = "username") {
-                            required = true
-                            autoFocus = true
-                            autoComplete = "username"
-
-                            if (username != null)
-                                value = username
-                        }
-                    }
-                }
-
-                p {
-                    label {
-                        +"Password: "
-                        input(InputType.password, name = "password") {
-                            required = true
-                            autoComplete = "current-password"
-                        }
-                    }
-
-                    if (invalidCredentials)
-                        +" Invalid username or password"
-                }
+                userLoginForm(
+                    username = username,
+                    invalidCredentials = invalidCredentials,
+                )
 
                 input(InputType.submit)
             }
