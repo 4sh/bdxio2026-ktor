@@ -33,6 +33,8 @@ fun Application.configureHttp() {
                 text = if (this@configureHttp.developmentMode) "500: $cause" else "Server error",
                 status = HttpStatusCode.InternalServerError,
             )
+
+            cause.printStackTrace()
         }
     }
 
