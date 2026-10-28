@@ -10,7 +10,7 @@ import kotlinx.html.*
 
 const val ROUTE_CREATE_USER = "/create-user"
 
-fun Routing.createUser(
+fun Route.createUser(
     users: UserService,
 ) {
     suspend fun RoutingContext.respondAccountPage(
@@ -36,54 +36,13 @@ fun Routing.createUser(
                 method = FormMethod.post,
                 encType = FormEncType.applicationXWwwFormUrlEncoded
             ) {
-                p {
-                    label {
-                        +"Username: "
-                        input(InputType.text, name = "username") {
-                            minLength = "3"
-                            required = true
-                            autoFocus = true
-                            autoComplete = "email"
-
-                            if (username != null)
-                                value = username
-                        }
-                    }
-
-                    if (usernameTaken)
-                        +" Username already taken"
-                }
-
-                p {
-                    label {
-                        +"Password: "
-                        input(InputType.password, name = "password") {
-                            minLength = "6"
-                            required = true
-                            autoComplete = "new-password"
-
-                            if (password != null)
-                                value = password
-                        }
-                    }
-                }
-
-                p {
-                    label {
-                        +"Confirm password: "
-                        input(InputType.password, name = "password-confirm") {
-                            minLength = "6"
-                            required = true
-                            autoComplete = "new-password"
-
-                            if (passwordConfirmation != null)
-                                value = passwordConfirmation
-                        }
-                    }
-
-                    if (passwordMismatch)
-                        +" Passwords do not match"
-                }
+                userCreationForm(
+                    username = username,
+                    password = password,
+                    passwordConfirmation = passwordConfirmation,
+                    usernameTaken = usernameTaken,
+                    passwordMismatch = passwordMismatch,
+                )
 
                 input(InputType.submit)
             }
