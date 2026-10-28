@@ -27,7 +27,11 @@ fun Route.homePage(
                 title = "Home",
             ) {
                 p {
-                    +"Hello World!"
+                    +"Welcome!"
+                }
+
+                p {
+                    +"This application allows multiple users to share expenses during shared trips."
                 }
 
                 if (user != null) {
