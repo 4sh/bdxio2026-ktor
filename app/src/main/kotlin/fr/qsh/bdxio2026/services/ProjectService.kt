@@ -201,6 +201,9 @@ class ProjectService(
 
     /**
      * Suggests reimbursements that even the spending of every member of the [project].
+     *
+     * This function queries the spending and the reimbursements itself.
+     * If you already have them, use the stateless [suggestReimbursements] instead.
      */
     suspend fun suggestReimbursements(
         currentUser: ObjectId,
@@ -210,50 +213,62 @@ class ProjectService(
         checkNotNull(projectValue) { "You are not allowed to access this project" }
 
         val spending = findTotalSpending(currentUser, project)
-        val done = findReimbursements(currentUser, project)
+        val reimbursements = findReimbursements(currentUser, project)
 
-        val members = projectValue.members
-        val total = spending.values.sum()
-        val base = total / members.size
-        val remainder = (total % members.size).toInt()
-
-        val balances = members.mapIndexed { index, member ->
-            val share = if (index < remainder) base + 1 else base
-            val sent = done.filter { it.fromUser == member }.sumOf { it.amount }
-            val received = done.filter { it.toUser == member }.sumOf { it.amount }
-
-            member to (spending[member] ?: 0L) + sent - received - share
-        }
-
-        return settleBalances(balances)
+        return projectValue.suggestReimbursements(spending, reimbursements)
     }
 
-    /**
-     * Computes suggested reimbursements.
-     *
-     * @param balances The balances of each member.
-     * The [ObjectId] represents the member's ID, the [Long] represents their balance: if positive, they are owed money, if negative, they owe money.
-     */
-    private fun settleBalances(balances: List<Pair<ObjectId, Long>>): List<SuggestedReimbursement> {
-        val debtors = balances.filter { it.second < 0 }.map { it.first to -it.second }.toMutableList()
-        val creditors = balances.filter { it.second > 0 }.toMutableList()
-        val result = ArrayList<SuggestedReimbursement>()
+}
 
-        while (debtors.isNotEmpty() && creditors.isNotEmpty()) {
-            debtors.sortByDescending { it.second }
-            creditors.sortByDescending { it.second }
+/**
+ * Suggests reimbursements that even the spending of every [Project.members] of this project.
+ *
+ * @param spendingPerMember Total amount spent by each user, as returned by [ProjectService.findTotalSpending].
+ * @param reimbursements Reimbursements that were already performed, as returned by [ProjectService.findReimbursements].
+ */
+fun Project.suggestReimbursements(
+    spendingPerMember: Map<ObjectId, Long>,
+    reimbursements: List<Reimbursement>,
+): List<SuggestedReimbursement> {
+    val total = spendingPerMember.values.sum()
+    val base = total / members.size
+    val remainder = (total % members.size).toInt()
 
-            val (debtor, owed) = debtors.removeFirst()
-            val (creditor, claimed) = creditors.removeFirst()
-            val amount = minOf(owed, claimed)
+    val balances = members.mapIndexed { index, member ->
+        val share = if (index < remainder) base + 1 else base
+        val sent = reimbursements.filter { it.fromUser == member }.sumOf { it.amount }
+        val received = reimbursements.filter { it.toUser == member }.sumOf { it.amount }
 
-            result += SuggestedReimbursement(fromUser = debtor, toUser = creditor, amount = amount)
-
-            if (owed > amount) debtors += debtor to (owed - amount)
-            if (claimed > amount) creditors += creditor to (claimed - amount)
-        }
-
-        return result
+        member to (spendingPerMember[member] ?: 0L) + sent - received - share
     }
 
+    return settleBalances(balances)
+}
+
+/**
+ * Computes suggested reimbursements.
+ *
+ * @param balances The balances of each member.
+ * The [ObjectId] represents the member's ID, the [Long] represents their balance: if positive, they are owed money, if negative, they owe money.
+ */
+private fun settleBalances(balances: List<Pair<ObjectId, Long>>): List<SuggestedReimbursement> {
+    val debtors = balances.filter { it.second < 0 }.map { it.first to -it.second }.toMutableList()
+    val creditors = balances.filter { it.second > 0 }.toMutableList()
+    val result = ArrayList<SuggestedReimbursement>()
+
+    while (debtors.isNotEmpty() && creditors.isNotEmpty()) {
+        debtors.sortByDescending { it.second }
+        creditors.sortByDescending { it.second }
+
+        val (debtor, owed) = debtors.removeFirst()
+        val (creditor, claimed) = creditors.removeFirst()
+        val amount = minOf(owed, claimed)
+
+        result += SuggestedReimbursement(fromUser = debtor, toUser = creditor, amount = amount)
+
+        if (owed > amount) debtors += debtor to (owed - amount)
+        if (claimed > amount) creditors += creditor to (claimed - amount)
+    }
+
+    return result
 }

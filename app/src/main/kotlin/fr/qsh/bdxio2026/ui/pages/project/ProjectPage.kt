@@ -4,6 +4,7 @@ import fr.qsh.bdxio2026.AuthCookiePayload
 import fr.qsh.bdxio2026.services.Project
 import fr.qsh.bdxio2026.services.ProjectService
 import fr.qsh.bdxio2026.services.UserService
+import fr.qsh.bdxio2026.services.suggestReimbursements
 import fr.qsh.bdxio2026.ui.pages.formatEuros
 import fr.qsh.bdxio2026.ui.pages.parseEuros
 import fr.qsh.bdxio2026.ui.pages.respondPage
@@ -64,7 +65,7 @@ fun Route.viewProject(
         val transactions = projects.findTransactions(currentUser, project._id)
         val spending = projects.findTotalSpending(currentUser, project._id)
         val reimbursements = projects.findReimbursements(currentUser, project._id)
-        val suggestions = projects.suggestReimbursements(currentUser, project._id)
+        val suggestions = project.suggestReimbursements(spending, reimbursements)
 
         val transactionsTotal = transactions.sumOf { it.amount }
         val transactionsAverage = transactionsTotal / project.members.size
