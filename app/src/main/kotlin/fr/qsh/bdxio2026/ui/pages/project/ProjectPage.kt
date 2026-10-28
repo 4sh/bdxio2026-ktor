@@ -104,7 +104,7 @@ fun Route.viewProject(
             )
 
             h2 {
-                +"Total spending"
+                +"Total spending (before reimbursements)"
             }
 
             ul {
