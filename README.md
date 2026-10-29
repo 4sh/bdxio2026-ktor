@@ -1,2 +1,5 @@
-# bdxio2026-ktor
-BDX I/O 2026 Workshop: Server-side Kotlin
+# BDX IO 2016 • Serveur Ktor
+
+Venez découvrir Ktor côté serveur !
+
+Pour commencer, veuillez suivre le [**guide de configuration**](docs/setup.md).
