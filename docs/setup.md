@@ -56,4 +56,6 @@ Pour finir, ouvrez la page web dans votre navigateur :
 - Via IntelliJ (nécessite la version payante) : `Open website` en restant appuyé sur le bouton SHIFT
 - Via un navigateur : ouvrir http://localhost:8080
 
-Si le site s'ouvre correctement, parfait, vous avez fini la configuration du projet ! [Vous pouvez commencer les missions](../README.md).
+Si le site s'ouvre correctement, parfait, vous avez fini la configuration du projet ! 
+
+Prochaine étape : [découvrir l'application](spec.md).
