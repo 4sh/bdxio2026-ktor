@@ -13,4 +13,4 @@ Chaque mission est indépendante et traite d'un sujet en particulier. Vous pouve
 
 [**Focus sur le backend**](mission-backend.md) (Ktor, MongoDB) : ajoutons des nouvelles fonctionnalités à l'application.
 
-**Focus sur la performance** (OpenTelemetry, Coroutines) : analysons la performance de l'application.
+[**Focus sur la performance**](mission-perf.md) (OpenTelemetry, Coroutines) : analysons la performance de l'application.
