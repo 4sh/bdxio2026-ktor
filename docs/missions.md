@@ -11,6 +11,6 @@ Chaque mission est indépendante et traite d'un sujet en particulier. Vous pouve
 
 [**Focus sur le langage Kotlin**](mission-euro.md) (value class, opérateurs, tests) : ajoutons des vérifications de type aux sommes d'argent.
 
-**Focus sur le backend** (Ktor, MongoDB) : ajoutons des nouvelles fonctionnalités à l'application.
+[**Focus sur le backend**](mission-backend.md) (Ktor, MongoDB) : ajoutons des nouvelles fonctionnalités à l'application.
 
 **Focus sur la performance** (OpenTelemetry, Coroutines) : analysons la performance de l'application.
